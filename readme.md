@@ -16,20 +16,19 @@ Here is a [demo](https://francoisromain.github.io/leaflet-markers-canvas/example
 
 ### Install
 
-- Install from npm (`npm i leaflet-markers-canvas`)
-- or download [leaflet-markers-canvas.js](https://github.com/francoisromain/leaflet-markers-canvas/blob/master/dist/leaflet-markers-canvas.js) from the dist folder.
+- Install from npm: `npm i leaflet-markers-canvas`
+- or download [leaflet-markers-canvas.js](https://github.com/francoisromain/leaflet-markers-canvas/blob/master/dist/leaflet-markers-canvas.js)
 
 ### Exemple
 
 ```js
 var map = L.map("map").setView([59.9578, 30.2987], 10);
 var tiles = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
-  attribution:
-    '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+  attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>',
   preferCanvas: true,
 }).addTo(map);
 
-var markersCanvas = new L.markersCanvas();
+var markersCanvas = new L.MarkersCanvas();
 markersCanvas.addTo(map);
 
 var icon = L.icon({
@@ -38,24 +37,22 @@ var icon = L.icon({
   iconAnchor: [10, 0],
 });
 
-var methods = {
-  mouseover(e) {
-    this.openPopup();
-  },
-  mouseout(e) {
-    this.closePopup();
-  },
-};
-
 var markers = [];
 
 for (var i = 0; i < 10000; i++) {
   var marker = L.marker(
     [58.5578 + Math.random() * 1.8, 29.0087 + Math.random() * 3.6],
-    { icon: icon }
+    { icon }
   )
     .bindPopup("I Am " + i)
-    .on(methods);
+    .on({
+      mouseover(e) {
+        this.openPopup();
+      },
+      mouseout(e) {
+        this.closePopup();
+      },
+    });
 
   markers.push(marker);
 }
@@ -79,6 +76,6 @@ markersCanvas.addMarkers(markers);
 
 ### `removeMarker(marker)`
 
-### To-do
+## To-do
 
 - Complete documentation
