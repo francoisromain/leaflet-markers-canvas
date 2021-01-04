@@ -1,0 +1,38 @@
+{
+  "name": "leaflet-markers-canvas",
+  "version": "0.1.0",
+  "description": "Renders  in Leaflet 1.0",
+  "main": "dist/leaflet-markers-canvas.min.js",
+  "scripts": {
+    "test": "exit 0",
+    "build": "rollup --config rollup.config.js",
+    "lint": "eslint src"
+  },
+  "keywords": [
+    "leaflet",
+    "canvas",
+    "markers"
+  ],
+  "authors": [
+    "Evgeniy Voynov <voynov.ev@gmail.com> (http://github.com/eJuke)",
+    "François Romain <francoisromain@gmail.com>"
+  ],
+  "license": "Beerware",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/francoisromain/leaflet-markers-canvas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/francoisromain/leaflet-markers-canvas/issues"
+  },
+  "devDependencies": {
+    "@rollup/plugin-buble": "^0.21.3",
+    "eslint": "^7.17.0",
+    "rollup": "^1.32.1",
+    "rollup-plugin-uglify": "^6.0.4"
+  },
+  "peerDependencies": {
+    "leaflet": "^1.7.1",
+    "rbush": "^3.0.1"
+  }
+}
