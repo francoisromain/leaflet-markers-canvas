@@ -1,6 +1,6 @@
 {
   "name": "leaflet-markers-canvas",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Renders  in Leaflet 1.0",
   "main": "dist/leaflet-markers-canvas.min.js",
   "scripts": {
@@ -14,10 +14,9 @@
     "markers"
   ],
   "authors": [
-    "Evgeniy Voynov <voynov.ev@gmail.com> (http://github.com/eJuke)",
     "François Romain <francoisromain@gmail.com>"
   ],
-  "license": "Beerware",
+  "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/francoisromain/leaflet-markers-canvas.git"
