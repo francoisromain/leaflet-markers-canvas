@@ -448,6 +448,6 @@
     },
   };
 
-  L.markersCanvas = L.Layer.extend(markersCanvas);
+  L.MarkersCanvas = L.Layer.extend(markersCanvas);
 
 })));
