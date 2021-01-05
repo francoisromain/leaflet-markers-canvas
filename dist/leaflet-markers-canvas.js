@@ -192,7 +192,7 @@
 
       this._canvas = L.DomUtil.create(
         "canvas",
-        "leaflet-canvas-icon-layer leaflet-layer"
+        "leaflet-markers-canvas-layer leaflet-layer"
       );
       this._canvas.width = x;
       this._canvas.height = y;
