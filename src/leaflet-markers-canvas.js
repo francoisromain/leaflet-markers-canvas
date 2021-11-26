@@ -117,6 +117,36 @@ const markersCanvas = {
     }
   },
 
+  // remove multiple markers (better for rBush performance)
+  removeMarkers(markers) {
+    let hasChanged = false;
+
+    markers.forEach((marker) => {
+      const latLng = marker.getLatLng();
+      const isVisible = this._map.getBounds().contains(latLng);
+
+      const positionBox = {
+        minX: latLng.lng,
+        minY: latLng.lat,
+        maxX: latLng.lng,
+        maxY: latLng.lat,
+        marker,
+      };
+
+      this._positionsTree.remove(positionBox, (a, b) => {
+        return a.marker._leaflet_id === b.marker._leaflet_id;
+      });
+
+      if (isVisible) {
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      this._redraw(true);
+    }
+  },
+
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   //
   // leaflet: default methods
