@@ -131,6 +131,38 @@
       }
     },
 
+    // remove multiple markers (better for rBush performance)
+    removeMarkers: function removeMarkers(markers) {
+      var this$1 = this;
+
+      var hasChanged = false;
+
+      markers.forEach(function (marker) {
+        var latLng = marker.getLatLng();
+        var isVisible = this$1._map.getBounds().contains(latLng);
+
+        var positionBox = {
+          minX: latLng.lng,
+          minY: latLng.lat,
+          maxX: latLng.lng,
+          maxY: latLng.lat,
+          marker: marker,
+        };
+
+        this$1._positionsTree.remove(positionBox, function (a, b) {
+          return a.marker._leaflet_id === b.marker._leaflet_id;
+        });
+
+        if (isVisible) {
+          hasChanged = true;
+        }
+      });
+
+      if (hasChanged) {
+        this._redraw(true);
+      }
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     //
     // leaflet: default methods

@@ -76,6 +76,8 @@ markersCanvas.addMarkers(markers);
 
 ### `removeMarker(marker)`
 
+### `removeMarkers(markers)`
+
 ## To-do
 
 - Complete documentation
