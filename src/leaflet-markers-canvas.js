@@ -408,8 +408,8 @@ const markersCanvas = {
         }
       }
     } else {
-      this._map._container.style.cursor = "";
       if (event.type === "mousemove" && this._mouseOverMarker) {
+        this._map._container.style.cursor = "";  // If mouse is leaving a marker, then set pointer back to default
         if (this._mouseOverMarker.listens("mouseout")) {
           this._mouseOverMarker.fire("mouseout");
         }
