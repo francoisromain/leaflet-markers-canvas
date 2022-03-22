@@ -146,6 +146,15 @@ const markersCanvas = {
       this._redraw(true);
     }
   },
+  
+  /*
+  Method to remove all markers 
+  */
+  removeAll(){
+     this._positionsTree.clear();
+     this._redraw(true)
+  },
+
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   //
