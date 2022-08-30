@@ -1,7 +1,17 @@
 import L from "leaflet";
-import RBush from "rbush";
 
-const markersCanvas = {
+/**
+ * A marker canvas layer.
+ *
+ * Use {@link L.MarkerCanvas#addMarker} to add a marker.
+ *
+ * Use {@link L.MarkerCanvas#removeMarker} to remove a marker.
+ *
+ * Pass `false` to the second argument of these methods to optimize bulk operations. Call ${@link L.MarkerCanvas#redraw} to redraw the map afterwards.
+ *
+ * @class L.MarkerCanvas
+ */
+L.MarkersCanvas = L.Layer.extend(/** @lends L.MarkerCanvas.prototype */{
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   //
   // private: properties
@@ -13,13 +23,7 @@ const markersCanvas = {
   _context: null,
 
   // leaflet markers (used to getBounds)
-  _markers: [],
-
-  // visible markers
-  _markersTree: new RBush(),
-
-  // every marker positions (even out of the canvas)
-  _positionsTree: new RBush(),
+  _markers: {},
 
   // icon images index
   _icons: {},
@@ -32,29 +36,16 @@ const markersCanvas = {
 
   addTo(map) {
     map.addLayer(this);
-
     return this;
   },
 
   getBounds() {
     const bounds = new L.LatLngBounds();
 
-    this._markers.forEach((marker) => {
-      bounds.extend(marker.getLatLng());
-    });
+    for (const id in this._markers)
+      bounds.extend(this._markers[id].getLatLng());
 
     return bounds;
-  },
-
-  redraw() {
-    this._redraw(true);
-  },
-
-  clear() {
-    this._positionsTree = new RBush();
-    this._markersTree = new RBush();
-    this._markers = [];
-    this._redraw(true);
   },
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -63,88 +54,39 @@ const markersCanvas = {
   //
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-  addMarker(marker) {
-    const { markerBox, positionBox, isVisible } = this._addMarker(marker);
-
-    if (markerBox && isVisible) {
-      this._markersTree.insert(markerBox);
+  /**
+   * Adds a marker to the map
+   * @param marker {import("leaflet").Marker} Marker to add
+   * @param redraw {boolean} If `true`, layer will automatically redraw. Pass `false` to optimize bulk calls but don't forget to call {@link L.MarkerCanvas#redraw} afterwards.
+   */
+  addMarker(marker, redraw = true) {
+    const notMarker = marker.options.pane !== "markerPane";
+    const hasNoIcon = !marker.options.icon;
+    if (notMarker || hasNoIcon) {
+      console.error((notMarker ? "This is not a marker" : "This marker has no icon"), marker);
+      return;
     }
 
-    if (positionBox) {
-      this._positionsTree.insert(positionBox);
-    }
+    // required for pop-up and tooltip
+    marker._map = this._map;
+
+    this._markers[L.Util.stamp(marker)] = marker;
+
+    if (redraw && this._isMarkerVisible(marker))
+      this._drawMarker(marker);
+
   },
 
-  // add multiple markers (better for rBush performance)
-  addMarkers(markers) {
-    const markerBoxes = [];
-    const positionBoxes = [];
+  /**
+   * Removes a marker from the map
+   * @param marker {import("leaflet").Marker} Marker to remove
+   * @param redraw {boolean} If `true`, layer will automatically redraw. Pass `false` to optimize bulk calls but don't forget to call {@link L.MarkerCanvas#redraw} afterwards.
+   */
+  removeMarker(marker, redraw = true) {
+    delete this._markers[L.Util.stamp(marker)];
 
-    markers.forEach((marker) => {
-      const { markerBox, positionBox, isVisible } = this._addMarker(marker);
-
-      if (markerBox && isVisible) {
-        markerBoxes.push(markerBox);
-      }
-
-      if (positionBox) {
-        positionBoxes.push(positionBox);
-      }
-    });
-
-    this._markersTree.load(markerBoxes);
-    this._positionsTree.load(positionBoxes);
-  },
-
-  removeMarker(marker) {
-    const latLng = marker.getLatLng();
-    const isVisible = this._map.getBounds().contains(latLng);
-
-    const positionBox = {
-      minX: latLng.lng,
-      minY: latLng.lat,
-      maxX: latLng.lng,
-      maxY: latLng.lat,
-      marker,
-    };
-
-    this._positionsTree.remove(positionBox, (a, b) => {
-      return a.marker._leaflet_id === b.marker._leaflet_id;
-    });
-
-    if (isVisible) {
-      this._redraw(true);
-    }
-  },
-
-  // remove multiple markers (better for rBush performance)
-  removeMarkers(markers) {
-    let hasChanged = false;
-
-    markers.forEach((marker) => {
-      const latLng = marker.getLatLng();
-      const isVisible = this._map.getBounds().contains(latLng);
-
-      const positionBox = {
-        minX: latLng.lng,
-        minY: latLng.lat,
-        maxX: latLng.lng,
-        maxY: latLng.lat,
-        marker,
-      };
-
-      this._positionsTree.remove(positionBox, (a, b) => {
-        return a.marker._leaflet_id === b.marker._leaflet_id;
-      });
-
-      if (isVisible) {
-        hasChanged = true;
-      }
-    });
-
-    if (hasChanged) {
-      this._redraw(true);
-    }
+    if (this._isMarkerVisible(marker) && redraw)
+      this.redraw();
   },
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -169,9 +111,8 @@ const markersCanvas = {
     map.on("click", this._fire, this);
     map.on("mousemove", this._fire, this);
 
-    if (map._zoomAnimated) {
+    if (map._zoomAnimated)
       map.on("zoomanim", this._animateZoom, this);
-    }
   },
 
   // called by Leaflet
@@ -183,15 +124,12 @@ const markersCanvas = {
     map.off("moveend", this._reset, this);
     map.off("resize", this._reset, this);
 
-    if (map._zoomAnimated) {
+    if (map._zoomAnimated)
       map.off("zoomanim", this._animateZoom, this);
-    }
   },
 
-  setOptions(options) {
-    L.Util.setOptions(this, options);
-
-    return this.redraw();
+  setOptions() {
+    return this;
   },
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -224,51 +162,10 @@ const markersCanvas = {
   //
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-  _addMarker(marker) {
-    if (marker.options.pane !== "markerPane" || !marker.options.icon) {
-      console.error("This is not a marker", marker);
-
-      return { markerBox: null, positionBox: null, isVisible: null };
-    }
-
-    // required for pop-up and tooltip
-    marker._map = this._map;
-
-    // add _leaflet_id property
-    L.Util.stamp(marker);
-
-    const latLng = marker.getLatLng();
-    const isVisible = this._map.getBounds().contains(latLng);
-    const { x, y } = this._map.latLngToContainerPoint(latLng);
-    const { iconSize, iconAnchor } = marker.options.icon.options;
-
-    const markerBox = {
-      minX: x - iconAnchor[0],
-      minY: y - iconAnchor[1],
-      maxX: x + iconSize[0] - iconAnchor[0],
-      maxY: y + iconSize[1] - iconAnchor[1],
-      marker,
-    };
-
-    const positionBox = {
-      minX: latLng.lng,
-      minY: latLng.lat,
-      maxX: latLng.lng,
-      maxY: latLng.lat,
-      marker,
-    };
-
-    if (isVisible) {
-      this._drawMarker(marker, { x, y });
-    }
-
-    this._markers.push(marker);
-
-    return { markerBox, positionBox, isVisible };
-  },
-
-  _drawMarker(marker, { x, y }) {
+  _drawMarker(marker) {
     const { iconUrl } = marker.options.icon.options;
+    const latLng = marker.getLatLng();
+    const { x, y } = this._map.latLngToContainerPoint(latLng);
 
     if (marker.image) {
       this._drawImage(marker, { x, y });
@@ -293,9 +190,11 @@ const markersCanvas = {
 
       image.onload = () => {
         this._icons[iconUrl].isLoaded = true;
-        this._icons[iconUrl].elements.forEach(({ marker, x, y }) => {
+
+        for (const el of this._icons[iconUrl].elements) {
+          const {marker, x, y} = el;
           this._drawImage(marker, { x, y });
-        });
+        }
       };
     }
   },
@@ -317,42 +216,43 @@ const markersCanvas = {
     this._context.restore();
   },
 
-  _redraw(clear) {
-    if (clear) {
-      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+  _getMarkerPxBounds(marker) {
+    const latLng = marker.getLatLng();
+    const { x, y } = this._map.latLngToContainerPoint(latLng);
+    const { iconSize, iconAnchor } = marker.options.icon.options;
+    return L.bounds(
+      [x - iconAnchor[0], y - iconAnchor[1]],
+      [x + iconSize[0] - iconAnchor[0], y + iconSize[1] - iconAnchor[1]]
+    );
+  },
+
+  _getMarkerLatLngBounds(marker) {
+    const {min, max} = this._getMarkerPxBounds(marker);
+    return L.latLngBounds(
+      this._map.containerPointToLatLng(min),
+      this._map.containerPointToLatLng(max),
+    )
+  },
+
+  _isMarkerVisible(marker) {
+    if (!this._map)
+      return false;
+
+    return this._map.getBounds().overlaps(this._getMarkerLatLngBounds(marker));
+  },
+
+  redraw() {
+    this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+    if (!this._map)
+      return;
+
+    for (const id in this._markers) {
+      const marker = this._markers[id];
+
+      if (this._isMarkerVisible(marker))
+        this._drawMarker(marker);
     }
-
-    if (!this._map || !this._positionsTree) return;
-
-    const mapBounds = this._map.getBounds();
-    const mapBoundsBox = {
-      minX: mapBounds.getWest(),
-      minY: mapBounds.getSouth(),
-      maxX: mapBounds.getEast(),
-      maxY: mapBounds.getNorth(),
-    };
-
-    // draw only visible markers
-    const markers = [];
-    this._positionsTree.search(mapBoundsBox).forEach(({ marker }) => {
-      const latLng = marker.getLatLng();
-      const { x, y } = this._map.latLngToContainerPoint(latLng);
-      const { iconSize, iconAnchor } = marker.options.icon.options;
-
-      const markerBox = {
-        minX: x - iconAnchor[0],
-        minY: y - iconAnchor[1],
-        maxX: x + iconSize[0] - iconAnchor[0],
-        maxY: y + iconSize[1] - iconAnchor[1],
-        marker,
-      };
-
-      markers.push(markerBox);
-      this._drawMarker(marker, { x, y });
-    });
-
-    this._markersTree.clear();
-    this._markersTree.load(markers);
   },
 
   // * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -369,54 +269,62 @@ const markersCanvas = {
     this._canvas.width = x;
     this._canvas.height = y;
 
-    this._redraw();
+    this.redraw();
   },
 
   _fire(event) {
-    if (!this._markersTree) return;
+    if (!this._markers)
+      return;
 
-    const { x, y } = event.containerPoint;
-    const markers = this._markersTree.search({
-      minX: x,
-      minY: y,
-      maxX: x,
-      maxY: y,
-    });
+    let foundMarker;
 
-    if (markers && markers.length) {
-      this._map._container.style.cursor = "pointer";
-      const marker = markers[0].marker;
+    for (const id in this._markers) {
+      const marker = this._markers[id];
+      const markerBounds = this._getMarkerPxBounds(marker);
 
-      if (event.type === "click") {
-        if (marker.listens("click")) {
-          marker.fire("click");
-        }
+      if (markerBounds.contains(event.containerPoint)) {
+        foundMarker = marker;
+        break;
       }
+    }
 
-      if (event.type === "mousemove") {
-        if (this._mouseOverMarker && this._mouseOverMarker !== marker) {
-          if (this._mouseOverMarker.listens("mouseout")) {
-            this._mouseOverMarker.fire("mouseout");
-          }
-        }
-
-        if (!this._mouseOverMarker || this._mouseOverMarker !== marker) {
-          this._mouseOverMarker = marker;
-          if (marker.listens("mouseover")) {
-            marker.fire("mouseover");
-          }
-        }
-      }
-    } else {
+    if (!foundMarker) {
       this._map._container.style.cursor = "";
+
       if (event.type === "mousemove" && this._mouseOverMarker) {
-        if (this._mouseOverMarker.listens("mouseout")) {
+
+        if (this._mouseOverMarker.listens("mouseout"))
           this._mouseOverMarker.fire("mouseout");
-        }
 
         delete this._mouseOverMarker;
       }
+
+      return;
     }
+
+    this._map._container.style.cursor = "pointer";
+
+    if (event.type === "click") {
+      if (foundMarker.listens("click")) {
+        foundMarker.fire("click");
+      }
+    }
+
+    if (event.type === "mousemove") {
+      if (this._mouseOverMarker && this._mouseOverMarker !== foundMarker) {
+        if (this._mouseOverMarker.listens("mouseout")) {
+          this._mouseOverMarker.fire("mouseout");
+        }
+      }
+
+      if (!this._mouseOverMarker || this._mouseOverMarker !== foundMarker) {
+        this._mouseOverMarker = foundMarker;
+        if (foundMarker.listens("mouseover")) {
+          foundMarker.fire("mouseover");
+        }
+      }
+    }
+
   },
 
   _animateZoom(event) {
@@ -429,6 +337,4 @@ const markersCanvas = {
 
     L.DomUtil.setTransform(this._canvas, offset, scale);
   },
-};
-
-L.MarkersCanvas = L.Layer.extend(markersCanvas);
+});
