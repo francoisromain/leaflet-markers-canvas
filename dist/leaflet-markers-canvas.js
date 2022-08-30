@@ -15,34 +15,43 @@
 	 *
 	 * Pass `false` to the second argument of these methods to optimize bulk operations. Call ${@link L.MarkerCanvas#redraw} to redraw the map afterwards.
 	 *
+	 * @param {Object} [options=undefined] See `L.Layer` constructor options
+	 *
 	 * @class L.MarkerCanvas
 	 */
 	L.MarkersCanvas = L.Layer.extend(/** @lends L.MarkerCanvas.prototype */{
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// private: properties
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-		_map: null,
-		_canvas: null,
-		_context: null,
+		initialize: function initialize(options) {
+			L.Util.setOptions(this, options);
+			this._markers = {};
+			this._icons = {};
+		},
 
-		// leaflet markers (used to getBounds)
-		_markers: {},
+		onAdd: function onAdd(map) {
+			this._map = map;
+			this._initCanvas();
+			this.getPane().appendChild(this._canvas);
 
-		// icon images index
-		_icons: {},
+			map.on("moveend", this._reset, this);
+			map.on("resize", this._reset, this);
 
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// public: global
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+			map.on("click", this._fire, this);
+			map.on("mousemove", this._fire, this);
 
-		addTo: function addTo(map) {
-			map.addLayer(this);
-			return this;
+			if (map._zoomAnimated)
+				{ map.on("zoomanim", this._animateZoom, this); }
+		},
+
+		onRemove: function onRemove(map) {
+			this.getPane().removeChild(this._canvas);
+
+			map.off("click", this._fire, this);
+			map.off("mousemove", this._fire, this);
+			map.off("moveend", this._reset, this);
+			map.off("resize", this._reset, this);
+
+			if (map._zoomAnimated)
+				{ map.off("zoomanim", this._animateZoom, this); }
 		},
 
 		getBounds: function getBounds() {
@@ -53,12 +62,6 @@
 
 			return bounds;
 		},
-
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// public: markers
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 		/**
 		 * Adds a marker to the map
@@ -95,58 +98,9 @@
 
 			delete this._markers[L.Util.stamp(marker)];
 
-			if (this._isMarkerVisible(marker) && redraw)
+			if (redraw && this._isMarkerVisible(marker))
 				{ this.redraw(); }
 		},
-
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// leaflet: default methods
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-		initialize: function initialize(options) {
-			L.Util.setOptions(this, options);
-		},
-
-		// called by Leaflet on `map.addLayer`
-		onAdd: function onAdd(map) {
-			this._map = map;
-			this._initCanvas();
-			this.getPane().appendChild(this._canvas);
-
-			map.on("moveend", this._reset, this);
-			map.on("resize", this._reset, this);
-
-			map.on("click", this._fire, this);
-			map.on("mousemove", this._fire, this);
-
-			if (map._zoomAnimated)
-				{ map.on("zoomanim", this._animateZoom, this); }
-		},
-
-		// called by Leaflet
-		onRemove: function onRemove(map) {
-			this.getPane().removeChild(this._canvas);
-
-			map.off("click", this._fire, this);
-			map.off("mousemove", this._fire, this);
-			map.off("moveend", this._reset, this);
-			map.off("resize", this._reset, this);
-
-			if (map._zoomAnimated)
-				{ map.off("zoomanim", this._animateZoom, this); }
-		},
-
-		setOptions: function setOptions() {
-			return this;
-		},
-
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// private: global methods
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 		_initCanvas: function _initCanvas() {
 			var ref = this._map.getSize();
@@ -167,12 +121,6 @@
 				("leaflet-zoom-" + (isAnimated ? "animated" : "hide"))
 			);
 		},
-
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// private: marker methods
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 		_drawMarker: function _drawMarker(marker) {
 			var this$1 = this;
@@ -276,10 +224,10 @@
 		},
 
 		redraw: function redraw() {
-			this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
-
 			if (!this._map)
 				{ return; }
+
+			this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
 			for (var id in this._markers) {
 				var marker = this._markers[id];
@@ -288,12 +236,6 @@
 					{ this._drawMarker(marker); }
 			}
 		},
-
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-		//
-		// private: event methods
-		//
-		// * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 		_reset: function _reset() {
 			var topLeft = this._map.containerPointToLayerPoint([0, 0]);
