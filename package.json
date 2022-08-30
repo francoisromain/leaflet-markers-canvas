@@ -1,6 +1,6 @@
 {
-  "name": "leaflet-markers-canvas",
-  "version": "0.2.2",
+  "name": "leaflet-markers-canvas-correct-edges-behavior",
+  "version": "1.0.0",
   "description": "A Leaflet plugin to render many markers in a canvas instead of the DOM",
   "main": "dist/leaflet-markers-canvas.min.js",
   "scripts": {
@@ -14,15 +14,16 @@
     "markers"
   ],
   "authors": [
-    "François Romain <francoisromain@gmail.com>"
+    "François Romain <francoisromain@gmail.com>",
+    "matafokka"
   ],
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/francoisromain/leaflet-markers-canvas.git"
+    "url": "https://github.com/matafokka/leaflet-markers-canvas-correct-edges-behavior.git"
   },
   "bugs": {
-    "url": "https://github.com/francoisromain/leaflet-markers-canvas/issues"
+    "url": "https://github.com/matafokka/leaflet-markers-canvas-correct-edges-behavior/issues"
   },
   "devDependencies": {
     "@rollup/plugin-buble": "^0.21.3",
@@ -31,7 +32,6 @@
     "rollup-plugin-uglify": "^6.0.4"
   },
   "peerDependencies": {
-    "leaflet": "^1.7.1",
-    "rbush": "^3.0.1"
+    "leaflet": "^1.7.1"
   }
 }
