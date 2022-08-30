@@ -15,5 +15,5 @@ export default {
     },
   ],
   plugins: [buble()],
-  external: ["rbush", "leaflet"],
+  external: ["leaflet"],
 };

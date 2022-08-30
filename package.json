@@ -32,7 +32,6 @@
     "rollup-plugin-uglify": "^6.0.4"
   },
   "peerDependencies": {
-    "leaflet": "^1.7.1",
-    "rbush": "^3.0.1"
+    "leaflet": "^1.7.1"
   }
 }
