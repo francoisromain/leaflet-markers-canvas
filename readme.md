@@ -11,5 +11,5 @@ IDK what's performance difference in numbers, but this fork still does its job.
 I don't know if I'll publish this on npm. For now, you can get it by adding this dependency to your `package.json`:
 
 ```
-"leaflet-markers-canvas": "matafokka/leaflet-markers-canvas-correct-edges-behavior"
+"leaflet-markers-canvas-correct-edges-behavior": "matafokka/leaflet-markers-canvas-correct-edges-behavior"
 ```
